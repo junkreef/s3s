@@ -15,8 +15,19 @@ A_VERSION = "0.3.0"
 
 DEBUG = False
 
+def in_notebook():
+    try:
+        from IPython import get_ipython
+        if 'IPKernelApp' not in get_ipython().config:  # pragma: no cover
+            return False
+    except ImportError:
+        return False
+    except AttributeError:
+        return False
+    return True
+
 os.system("") # ANSI escape setup
-if sys.version_info[1] >= 7: # only works on python 3.7+
+if sys.version_info[1] >= 7 and in_notebook() == False: # only works on python 3.7+
 	sys.stdout.reconfigure(encoding='utf-8') # note: please stop using git bash
 
 # CONFIG.TXT CREATION
