@@ -5,7 +5,7 @@
 import base64, datetime, json, re, sys, uuid
 import requests
 from bs4 import BeautifulSoup
-import iksm
+from . import iksm
 
 SPLATNET3_URL    = iksm.SPLATNET3_URL
 GRAPHQL_URL      = f'{SPLATNET3_URL}/api/graphql'

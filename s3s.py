@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from subprocess import call
 import msgpack
 from packaging import version
-import iksm, utils
+from . import iksm, utils
 
 A_VERSION = "0.3.0"
 
@@ -201,10 +201,38 @@ def gen_new_tokens(reason, force=False):
 		print(f"Wrote tokens for {acc_name} to config.txt.\n")
 
 
-def fetch_json(which, separate=False, exportall=False, specific=False, numbers_only=False, printout=False, skipprefetch=False):
+def fetch_json_raw(which, printout=False, skipprefetch=False):
 	'''Returns results JSON from SplatNet 3, including a combined dictionary for battles + SR jobs if requested.'''
 
-	swim = SquidProgress()
+	if DEBUG:
+		print(f"* fetch_json() called with which={which}")
+
+	if not skipprefetch:
+		prefetch_checks(printout)
+		if DEBUG:
+			print("* prefetch_checks() succeeded")
+	else:
+		if DEBUG:
+			print("* skipping prefetch_checks()")
+
+	ink_list, salmon_list = [], []
+	parent_files = []
+
+	sha = which
+
+	lang = 'en-US' if sha == "CoopHistoryQuery" else None
+	sha = utils.translate_rid[sha]
+
+	query1 = requests.post(utils.GRAPHQL_URL,
+		data=utils.gen_graphql_body(sha),
+		headers=headbutt(forcelang=lang),
+		cookies=dict(_gtoken=GTOKEN))
+
+	return json.loads(query1.text)
+
+
+def fetch_json(which, separate=False, exportall=False, specific=False, numbers_only=False, printout=False, skipprefetch=False):
+	'''Returns results JSON from SplatNet 3, including a combined dictionary for battles + SR jobs if requested.'''
 
 	if DEBUG:
 		print(f"* fetch_json() called with which={which}, separate={separate}, " \
@@ -221,7 +249,6 @@ def fetch_json(which, separate=False, exportall=False, specific=False, numbers_o
 	else:
 		if DEBUG:
 			print("* skipping prefetch_checks()")
-	swim()
 
 	ink_list, salmon_list = [], []
 	parent_files = []
@@ -264,7 +291,6 @@ def fetch_json(which, separate=False, exportall=False, specific=False, numbers_o
 				headers=headbutt(forcelang=lang),
 				cookies=dict(_gtoken=GTOKEN))
 			query1_resp = json.loads(query1.text)
-			swim()
 
 			# ink battles - latest 50 of any type
 			if "latestBattleHistories" in query1_resp["data"]:
@@ -308,9 +334,9 @@ def fetch_json(which, separate=False, exportall=False, specific=False, numbers_o
 				ink_list.extend(battle_ids)
 				salmon_list.extend(job_ids)
 			else: # ALL DATA - TAKES A LONG TIME
-				ink_list.extend(thread_pool.map(fetch_detailed_result, [True]*len(battle_ids), battle_ids, [swim]*len(battle_ids)))
+				ink_list.extend(thread_pool.map(fetch_detailed_result, [True]*len(battle_ids), battle_ids))
 
-				salmon_list.extend(thread_pool.map(fetch_detailed_result, [False]*len(job_ids), job_ids, [swim]*len(job_ids)))
+				salmon_list.extend(thread_pool.map(fetch_detailed_result, [False]*len(job_ids), job_ids))
 
 				if needs_sorted: # put regular, bankara, and private in order, since they were exported in sequential chunks
 					try:
@@ -337,7 +363,7 @@ def fetch_json(which, separate=False, exportall=False, specific=False, numbers_o
 			return combined
 
 
-def fetch_detailed_result(is_vs_history, history_id, swim):
+def fetch_detailed_result(is_vs_history, history_id):
 	'''Helper function for fetch_json().'''
 
 	sha = "VsHistoryDetailQuery" if is_vs_history else "CoopHistoryDetailQuery"
@@ -350,7 +376,6 @@ def fetch_detailed_result(is_vs_history, history_id, swim):
 		cookies=dict(_gtoken=GTOKEN))
 	query2_resp = json.loads(query2.text)
 
-	swim()
 	return query2_resp
 
 
