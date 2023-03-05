@@ -368,7 +368,8 @@ def fetch_detailed_result(is_vs_history, history_id):
 
 	sha = "VsHistoryDetailQuery" if is_vs_history else "CoopHistoryDetailQuery"
 	varname = "vsResultId" if is_vs_history else "coopHistoryDetailId"
-	lang = None if is_vs_history else 'en-US'
+	# lang = None if is_vs_history else 'en-US'
+	lang = None
 
 	query2 = requests.post(utils.GRAPHQL_URL,
 		data=utils.gen_graphql_body(utils.translate_rid[sha], varname, history_id),
